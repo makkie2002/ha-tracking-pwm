@@ -1,4 +1,4 @@
-# Slow PWM
+# Tracking PWM
 
 A Home Assistant number entity that drives a **single relay** from an analog
 setpoint using sigma-delta (Bresenham-style) error feedback.
@@ -33,18 +33,18 @@ and `output_states` the relay.
 ### HACS (preferred)
 
 1. In HACS, add this repository as a custom integration repository.
-2. Install `Slow PWM`, restart Home Assistant.
+2. Install `Tracking PWM`, restart Home Assistant.
 
 ### Manual
 
-1. Copy `custom_components/slow_pwm/` into your HA `custom_components/` folder.
+1. Copy `custom_components/tracking_pwm/` into your HA `custom_components/` folder.
 2. Restart Home Assistant.
 
 ## Configuration (YAML)
 
 ```yaml
 number:
-  - platform: slow_pwm
+  - platform: tracking_pwm
     name: Floorheater living room
     outputs:
       - "switch.living_room_group1"

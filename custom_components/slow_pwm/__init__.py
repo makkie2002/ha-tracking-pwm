@@ -1,1 +1,0 @@
-"""The Slow PWM integration."""

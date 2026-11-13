@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from custom_components.slow_pwm.controller import Tracker
+from custom_components.tracking_pwm.controller import Tracker
 
 
 def T0():

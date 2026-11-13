@@ -1,6 +1,6 @@
 """Constants for the Slow PWM integration."""
 
-DOMAIN = "slow_pwm"
+DOMAIN = "tracking_pwm"
 
 CONF_OUTPUTS = "outputs"
 CONF_MIN_SWITCH_TIME = "minimal_switch_time"

@@ -95,16 +95,16 @@ async def async_setup_platform(
     _discovery_info: DiscoveryTypeInfo | None = None,
 ) -> None:
     """Set up the slow PWM number platform."""
-    async_add_entities([SlowPWMEntity(hass, config, config.get(CONF_UNIQUE_ID))])
+    async_add_entities([TrackingPWMEntity(hass, config, config.get(CONF_UNIQUE_ID))])
 
 
-class SlowPWMEntity(RestoreNumber):
+class TrackingPWMEntity(RestoreNumber):
     """A number whose value is the wanted duty of a single relay."""
 
     def __init__(self, hass: HomeAssistant, config, unique_id: str | None) -> None:
         """Initialize the Slow PWM number."""
         self._hass = hass
-        self._attr_name = config.get(CONF_NAME, "SLOW_PWM_NUMBER")
+        self._attr_name = config.get(CONF_NAME, "TRACKING_PWM_NUMBER")
         self._attr_unique_id = unique_id
         self._attr_native_min_value = config.get(CONF_MINIMUM, DEFAULT_MIN_VALUE)
         self._attr_native_max_value = config.get(CONF_MAXIMUM, DEFAULT_MAX_VALUE)
@@ -127,7 +127,7 @@ class SlowPWMEntity(RestoreNumber):
             outputs = [outputs]
         if len(outputs) != 1:
             raise ValueError(
-                f"slow_pwm supports exactly one output relay, got {len(outputs)}"
+                f"tracking_pwm supports exactly one output relay, got {len(outputs)}"
             )
         self._output = outputs[0]
         self._range = self._attr_native_max_value - self._attr_native_min_value
@@ -198,7 +198,7 @@ class SlowPWMEntity(RestoreNumber):
     async def async_set_native_value(self, value: float) -> None:
         """Set new wanted value and evaluate immediately."""
         if isnan(value):
-            _LOGGER.warning("Invalid value for SlowPWM: %s", value)
+            _LOGGER.warning("Invalid value for tracking_pwm: %s", value)
             return
         self._attr_native_value = value
         await self._async_evaluate(dt_util.utcnow().replace(microsecond=0))
