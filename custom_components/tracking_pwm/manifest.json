@@ -1,13 +1,13 @@
 {
   "domain": "tracking_pwm",
   "name": "Tracking PWM",
-  "codeowners": ["@YOURUSERNAME"],
+  "codeowners": ["@makkie2002"],
   "config_flow": false,
   "dependencies": [],
-  "documentation": "https://github.com/YOURUSERNAME/ha-tracking-pwm",
+  "documentation": "https://github.com/makkie2002/ha-tracking-pwm",
   "homekit": {},
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/YOURUSERNAME/ha-tracking-pwm/issues",
+  "issue_tracker": "https://github.com/makkie2002/ha-tracking-pwm/issues",
   "requirements": [],
   "version": "1.0.0"
 }
