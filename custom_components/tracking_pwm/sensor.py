@@ -141,7 +141,7 @@ class _SecondsSinceSwitchSensor(_DiagnosticSensor):
         self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_suggested_display_precision = 0
+        self._attr_suggested_display_precision = 1
 
     @property
     def native_value(self) -> float | None:
@@ -149,7 +149,7 @@ class _SecondsSinceSwitchSensor(_DiagnosticSensor):
         value = self._tracker.seconds_since(
             dt_util.utcnow().replace(microsecond=0), "switch"
         )
-        return None if value is None else round(value, 0)
+        return None if value is None else round(value, 1)
 
 
 class _DwellRemainingSensor(_DiagnosticSensor):
@@ -164,14 +164,14 @@ class _DwellRemainingSensor(_DiagnosticSensor):
         self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_suggested_display_precision = 0
+        self._attr_suggested_display_precision = 1
 
     @property
     def native_value(self) -> float:
         """Return the remaining dwell hold in seconds."""
         return round(
             self._tracker.hold_remaining(dt_util.utcnow().replace(microsecond=0), "dwell"),
-            0,
+            1,
         )
 
 
@@ -187,14 +187,14 @@ class _CycleRemainingSensor(_DiagnosticSensor):
         self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_suggested_display_precision = 0
+        self._attr_suggested_display_precision = 1
 
     @property
     def native_value(self) -> float:
         """Return the remaining cycle hold in seconds."""
         return round(
             self._tracker.hold_remaining(dt_util.utcnow().replace(microsecond=0), "cycle"),
-            0,
+            1,
         )
 
 
@@ -210,13 +210,13 @@ class _LastOnSensor(_DiagnosticSensor):
         self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_suggested_display_precision = 0
+        self._attr_suggested_display_precision = 1
 
     @property
     def native_value(self) -> float | None:
         """Return the last completed on-phase length, if any."""
         value = self._tracker.last_on_duration
-        return None if value is None else round(value, 0)
+        return None if value is None else round(value, 1)
 
 
 class _LastOffSensor(_DiagnosticSensor):
@@ -231,13 +231,13 @@ class _LastOffSensor(_DiagnosticSensor):
         self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
         self._attr_device_class = SensorDeviceClass.DURATION
         self._attr_state_class = SensorStateClass.MEASUREMENT
-        self._attr_suggested_display_precision = 0
+        self._attr_suggested_display_precision = 1
 
     @property
     def native_value(self) -> float | None:
         """Return the last completed off-phase length, if any."""
         value = self._tracker.last_off_duration
-        return None if value is None else round(value, 0)
+        return None if value is None else round(value, 1)
 
 
 class _SwitchCountSensor(_DiagnosticSensor):
@@ -250,6 +250,7 @@ class _SwitchCountSensor(_DiagnosticSensor):
         """Initialize the sensor."""
         super().__init__(entry_id, output, name, tracker)
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+        self._attr_suggested_display_precision = 0
 
     @property
     def native_value(self) -> int:

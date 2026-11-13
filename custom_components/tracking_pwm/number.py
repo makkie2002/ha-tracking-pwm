@@ -31,9 +31,11 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_UNIQUE_ID,
     EVENT_HOMEASSISTANT_START,
+    PERCENTAGE,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     EntityCategory,
+    UnitOfTime,
 )
 from homeassistant.core import CoreState, HomeAssistant
 import homeassistant.helpers.config_validation as cv
@@ -151,6 +153,7 @@ class TrackingPWMEntity(RestoreNumber):
         self._attr_native_min_value = config.get(CONF_MINIMUM, DEFAULT_MIN_VALUE)
         self._attr_native_max_value = config.get(CONF_MAXIMUM, DEFAULT_MAX_VALUE)
         self._attr_native_step = config.get(CONF_STEP, DEFAULT_STEP)
+        self._attr_native_unit_of_measurement = PERCENTAGE
         self._attr_mode = config.get(CONF_MODE, DEFAULT_MODE)
         self._interval = as_timedelta(
             config.get(CONF_UPDATE_INTERVAL), DEFAULT_UPDATE_INTERVAL
@@ -309,6 +312,8 @@ class _DialBase(NumberBase):
         self._attr_native_min_value = self._min
         self._attr_native_max_value = self._max
         self._attr_native_step = 1.0
+        self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
+        self._attr_suggested_display_precision = 0
         self._attr_mode = MODE_BOX
         self._attr_entity_category = EntityCategory.CONFIG
         self._attr_native_value = float(initial)
