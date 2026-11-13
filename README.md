@@ -35,12 +35,20 @@ and `output_states` the relay.
 1. In HACS, add this repository as a custom integration repository.
 2. Install `Tracking PWM`, restart Home Assistant.
 
+## Configuration
+
+### User interface (preferred)
+
+Settings -> Devices & Services -> Add Integration -> search for
+"Tracking PWM". Pick the output switch and tune the parameters; everything
+can later be changed under Configure.
+
 ### Manual
 
 1. Copy `custom_components/tracking_pwm/` into your HA `custom_components/` folder.
 2. Restart Home Assistant.
 
-## Configuration (YAML)
+## Configuration reference (YAML)
 
 ```yaml
 number:

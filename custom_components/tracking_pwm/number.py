@@ -15,6 +15,8 @@ from homeassistant.components.number import (
     PLATFORM_SCHEMA,
     RestoreNumber,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     CONF_MAXIMUM,
@@ -86,6 +88,17 @@ def _as_timedelta(value: Any, default: dict) -> timedelta:
     if isinstance(value, dict):
         return timedelta(**value)
     return timedelta(**default)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Initialize Tracking PWM config entry."""
+    async_add_entities(
+        [TrackingPWMEntity(hass, config_entry.options, config_entry.entry_id)]
+    )
 
 
 async def async_setup_platform(

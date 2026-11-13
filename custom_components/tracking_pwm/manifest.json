@@ -2,7 +2,7 @@
   "domain": "tracking_pwm",
   "name": "Tracking PWM",
   "codeowners": ["@makkie2002"],
-  "config_flow": false,
+  "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/makkie2002/ha-tracking-pwm",
   "homekit": {},

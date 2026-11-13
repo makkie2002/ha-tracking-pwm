@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "maximum": "Maximum",
+          "minimal_cycle_period": "Minimum cycle period",
+          "minimal_switch_time": "Minimum relay dwell time",
+          "minimum": "Minimum",
+          "mode": "Mode",
+          "name": "Name",
+          "outputs": "Output switch entity",
+          "step": "Step size",
+          "update_interval": "Evaluation interval"
+        },
+        "data_description": {
+          "maximum": "Value that means fully on (duty 1).",
+          "minimal_cycle_period": "Minimum time between cycle starts. Empty = twice the dwell time.",
+          "minimal_switch_time": "Shortest time the relay stays on or off before it may switch again.",
+          "minimum": "Value that means fully off (duty 0).",
+          "mode": "Mode of user interface elements.",
+          "step": "Step size of the number."
+        },
+        "description": "Create a number that drives a single switch with sigma-delta tracking PWM. The relay follows the wanted duty; the delivery-debt integrator keeps the long-term average exact.",
+        "title": "Track a switch output with sigma-delta PWM"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "maximum": "Maximum",
+          "minimal_cycle_period": "Minimum cycle period",
+          "minimal_switch_time": "Minimum relay dwell time",
+          "minimum": "Minimum",
+          "mode": "Mode",
+          "outputs": "Output switch entity",
+          "step": "Step size",
+          "update_interval": "Evaluation interval"
+        },
+        "data_description": {
+          "maximum": "Value that means fully on (duty 1).",
+          "minimum": "Value that means fully off (duty 0).",
+          "mode": "Mode of user interface elements."
+        }
+      }
+    }
+  },
+  "title": "Track a switch output with sigma-delta PWM"
+}

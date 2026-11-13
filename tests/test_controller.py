@@ -1,9 +1,22 @@
 """Unit tests for the pure sigma-delta tracker. No Home Assistant needed."""
+import importlib.util
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
-from custom_components.tracking_pwm.controller import Tracker
+# Import controller.py by file path: it has zero dependencies, and this
+# avoids executing the HA-dependent package __init__.
+_spec = importlib.util.spec_from_file_location(
+    "tracking_controller",
+    Path(__file__).resolve().parent.parent
+    / "custom_components"
+    / "tracking_pwm"
+    / "controller.py",
+)
+_controller = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_controller)
+Tracker = _controller.Tracker
 
 
 def T0():
