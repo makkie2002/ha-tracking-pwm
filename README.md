@@ -24,7 +24,8 @@ the wanted duty at any setpoint** — there is no deadband error and no
 cycle anchor to fall behind. At 50% with defaults the relay runs a
 2min ON / 2min OFF metronome; at 5% it fires one 2min pulse per ~40min.
 
-The number state always shows the wanted value. Diagnostics attributes:
+The number state always shows the wanted value. Diagnostics attributes
+(mirrored as entities, see below):
 
 | Attribute | Meaning |
 |---|---|
@@ -36,6 +37,27 @@ The number state always shows the wanted value. Diagnostics attributes:
 | `cycle_remaining` | Seconds until a new cycle may start; > 0 means the cycle gate is holding |
 | `last_on_duration` / `last_off_duration` | Length in seconds of the most recent completed on/off phase (`None` until one completes) |
 | `switch_count` | Total relay flips since start (wear odometer) |
+
+## Device: setpoint, dials and diagnostics
+
+Adding the integration via the UI creates one **device** per relay:
+
+* **Setpoint** (`number`): the wanted duty. This is the main entity —
+  point your PID controller output at it.
+* **Config dials** (adjust live, no restart; reset to the configured
+  values on restart):
+  * *dwell* (s) — minimum relay on/off time, applied immediately
+  * *minimum cycle* (s) — minimum time between cycle starts, applied
+    immediately; `0` means automatic (2× dwell)
+  * *update interval* (s) — re-evaluation tick, re-armed immediately
+* **Diagnostics**: a `relay` binary sensor plus sensors for delivery
+  debt, wanted duty, seconds since switch, dwell/cycle remaining, last
+  on/off durations and switch count. Because these are sensors (not just
+  attributes), they graph and record history; `switch_count` is a
+  total-increasing counter.
+
+YAML setups expose only the setpoint number (dials and sensors are
+UI-config-entry features).
 
 ## Installation
 

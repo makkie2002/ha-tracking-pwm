@@ -140,3 +140,37 @@ def test_diagnostics_bookkeeping():
     assert tr.hold_remaining(later, "dwell") == 90.0
     with pytest.raises(ValueError):
         tr.hold_remaining(later, "bogus")
+
+
+def test_configure_updates_live():
+    tr = Tracker(dwell_s=120.0)
+    assert tr.configure(dwell_s=60.0) == {"dwell": 60.0, "min_cycle": 240.0}
+    assert tr.min_cycle == 240.0  # unchanged, still >= 2x dwell
+    assert tr.configure(min_cycle_s=30.0) == {"dwell": 60.0, "min_cycle": 120.0}
+    assert tr.min_cycle == 120.0  # clamped to 2x dwell
+
+
+def test_configure_rescales_debt_limit():
+    tr = Tracker(dwell_s=120.0)
+    assert tr.debt_limit == max(8 * 120.0, 2 * 240.0, 600.0)
+    tr.configure(dwell_s=600.0)
+    assert tr.debt_limit == max(8 * 600.0, 2 * 1200.0, 600.0)
+    tr.debt = 999999.0
+    tr.configure(dwell_s=60.0)  # min_cycle stays 1200 from before
+    assert tr.debt == max(8 * 60.0, 2 * 1200.0, 600.0)
+
+
+def test_listeners_notified():
+    tr = Tracker(dwell_s=0.0)
+    calls = []
+
+    def cb():
+        calls.append(1)
+
+    tr.subscribe(cb)
+    tr.notify()
+    assert calls == [1]
+    tr.unsubscribe(cb)
+    tr.notify()
+    assert calls == [1]
+    tr.unsubscribe(cb)  # no error when absent

@@ -43,12 +43,14 @@ class Tracker:
         self.debt_limit = float(debt_limit_s)
         self.debt = 0.0
         self.relay_on = False
+        self.wanted = 0.0
         self.switch_count = 0
         self.last_on_duration: float | None = None
         self.last_off_duration: float | None = None
         self._t_last = None
         self._t_switch = None
         self._t_cycle = None
+        self._listeners: list = []
 
     def update(self, now, wanted: float) -> tuple[bool, bool]:
         """Advance the tracker to ``now`` with duty ``wanted`` (0..1).
@@ -57,6 +59,7 @@ class Tracker:
         0..1; a wanted duty of 0 always means off.
         """
         wanted = min(1.0, max(0.0, float(wanted)))
+        self.wanted = wanted
         if self._t_last is None:
             dt = 0.0
         else:
@@ -114,3 +117,40 @@ class Tracker:
         if stamp is None:
             return 0.0
         return max(0.0, span - (now - stamp).total_seconds())
+
+    def configure(
+        self, dwell_s: float | None = None, min_cycle_s: float | None = None
+    ) -> dict:
+        """Live-update dwell/cycle guards; keeps all invariants.
+
+        min_cycle_s of None (or below 2x dwell) falls back to 2x dwell.
+        Returns the effective {"dwell": .., "min_cycle": ..} in seconds.
+        """
+        if dwell_s is not None:
+            self.dwell = max(0.0, float(dwell_s))
+        if min_cycle_s is None:
+            self.min_cycle = max(self.min_cycle, 2.0 * self.dwell)
+        else:
+            self.min_cycle = max(float(min_cycle_s), 2.0 * self.dwell)
+        self.debt_limit = max(8.0 * self.dwell, 2.0 * self.min_cycle, 600.0)
+        if self.debt > self.debt_limit:
+            self.debt = self.debt_limit
+        elif self.debt < -self.debt_limit:
+            self.debt = -self.debt_limit
+        return {"dwell": self.dwell, "min_cycle": self.min_cycle}
+
+    def subscribe(self, callback) -> None:
+        """Register a no-arg callback fired on every explicit notify()."""
+        self._listeners.append(callback)
+
+    def unsubscribe(self, callback) -> None:
+        """Remove a previously registered callback."""
+        try:
+            self._listeners.remove(callback)
+        except ValueError:
+            pass
+
+    def notify(self) -> None:
+        """Fire all registered callbacks (called by the entity each tick)."""
+        for callback in list(self._listeners):
+            callback()

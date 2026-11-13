@@ -1,4 +1,4 @@
-"""Constants for the Slow PWM integration."""
+"""Constants for the Tracking PWM integration."""
 
 DOMAIN = "tracking_pwm"
 
@@ -28,3 +28,37 @@ MODE_AUTO = "auto"
 DEFAULT_MODE = MODE_SLIDER
 DEFAULT_SWITCH_TIME = {"minutes": 2}
 DEFAULT_UPDATE_INTERVAL = {"seconds": 30}
+
+
+def as_timedelta(value, default: dict):
+    """Parse a time_period_dict (or timedelta) config value."""
+    from datetime import timedelta
+
+    if isinstance(value, timedelta):
+        return value
+    if isinstance(value, dict):
+        return timedelta(**value)
+    return timedelta(**default)
+
+
+def normalize_outputs(outputs):
+    """Normalize a UI string or YAML list to a single-element list."""
+    if isinstance(outputs, str):
+        outputs = [outputs]
+    if len(outputs) != 1:
+        raise ValueError(
+            f"tracking_pwm supports exactly one output relay, got {len(outputs)}"
+        )
+    return outputs
+
+
+def device_info_for(output: str, name: str):
+    """Shared device for all entities driving one relay."""
+    from homeassistant.helpers.entity import DeviceInfo
+
+    return DeviceInfo(
+        identifiers={(DOMAIN, output)},
+        name=name,
+        manufacturer="makkie2002",
+        model="Tracking PWM",
+    )

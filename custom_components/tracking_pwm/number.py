@@ -1,4 +1,4 @@
-"""Number entity: thin Home Assistant wrapper around the Tracker."""
+"""Number entities: setpoint plus live tuning dials around the Tracker."""
 from __future__ import annotations
 
 from datetime import timedelta
@@ -13,9 +13,9 @@ from homeassistant.components.number import (
     DEFAULT_MIN_VALUE,
     DEFAULT_STEP,
     PLATFORM_SCHEMA,
+    Number,
     RestoreNumber,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -27,9 +27,11 @@ from homeassistant.const import (
     EVENT_HOMEASSISTANT_START,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
+    EntityCategory,
 )
 from homeassistant.core import CoreState, HomeAssistant
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 import homeassistant.util.dt as dt_util
@@ -55,9 +57,13 @@ from .const import (
     DEFAULT_MODE,
     DEFAULT_SWITCH_TIME,
     DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
     MODE_AUTO,
     MODE_BOX,
     MODE_SLIDER,
+    as_timedelta,
+    device_info_for,
+    normalize_outputs,
 )
 from .controller import Tracker
 
@@ -87,23 +93,25 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def _as_timedelta(value: Any, default: dict) -> timedelta:
-    """Parse a time_period_dict (or timedelta) config value."""
-    if isinstance(value, timedelta):
-        return value
-    if isinstance(value, dict):
-        return timedelta(**value)
-    return timedelta(**default)
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Initialize Tracking PWM config entry."""
+    """Initialize Tracking PWM config entry: setpoint plus live dials."""
+    runtime = hass.data[DOMAIN][config_entry.entry_id]
+    tracker: Tracker = runtime["tracker"]
+    output: str = runtime["output"]
+    name: str = runtime["name"]
+    entry_id = config_entry.entry_id
+    setpoint = TrackingPWMEntity(hass, config_entry.options, entry_id, tracker)
     async_add_entities(
-        [TrackingPWMEntity(hass, config_entry.options, config_entry.entry_id)]
+        [
+            setpoint,
+            DwellDial(hass, entry_id, output, name, tracker, tracker.dwell),
+            CycleDial(hass, entry_id, output, name, tracker, tracker.min_cycle),
+            IntervalDial(hass, entry_id, output, name, tracker, setpoint),
+        ]
     )
 
 
@@ -113,26 +121,32 @@ async def async_setup_platform(
     async_add_entities: AddEntitiesCallback,
     _discovery_info: Any | None = None,
 ) -> None:
-    """Set up the slow PWM number platform."""
-    async_add_entities([TrackingPWMEntity(hass, config, config.get(CONF_UNIQUE_ID))])
+    """Set up the tracking PWM number platform (YAML: setpoint only)."""
+    from . import build_tracker
+
+    output = normalize_outputs(config[CONF_OUTPUTS])[0]
+    tracker = build_tracker(config)
+    async_add_entities(
+        [TrackingPWMEntity(hass, config, config.get(CONF_UNIQUE_ID), tracker)]
+    )
 
 
 class TrackingPWMEntity(RestoreNumber):
     """A number whose value is the wanted duty of a single relay."""
 
-    def __init__(self, hass: HomeAssistant, config, unique_id: str | None) -> None:
-        """Initialize the Slow PWM number."""
+    def __init__(
+        self, hass: HomeAssistant, config, unique_id: str | None, tracker: Tracker
+    ) -> None:
+        """Initialize the Tracking PWM number."""
         self._hass = hass
+        self._output = normalize_outputs(config[CONF_OUTPUTS])[0]
         self._attr_name = config.get(CONF_NAME, "TRACKING_PWM_NUMBER")
         self._attr_unique_id = unique_id
         self._attr_native_min_value = config.get(CONF_MINIMUM, DEFAULT_MIN_VALUE)
         self._attr_native_max_value = config.get(CONF_MAXIMUM, DEFAULT_MAX_VALUE)
         self._attr_native_step = config.get(CONF_STEP, DEFAULT_STEP)
         self._attr_mode = config.get(CONF_MODE, DEFAULT_MODE)
-        self._dwell = _as_timedelta(
-            config.get(CONF_MIN_SWITCH_TIME), DEFAULT_SWITCH_TIME
-        )
-        self._interval = _as_timedelta(
+        self._interval = as_timedelta(
             config.get(CONF_UPDATE_INTERVAL), DEFAULT_UPDATE_INTERVAL
         )
         if self._interval.total_seconds() < 1:
@@ -141,34 +155,16 @@ class TrackingPWMEntity(RestoreNumber):
                 self._interval,
             )
             self._interval = timedelta(seconds=1)
-        outputs = config[CONF_OUTPUTS]
-        if isinstance(outputs, str):
-            outputs = [outputs]
-        if len(outputs) != 1:
-            raise ValueError(
-                f"tracking_pwm supports exactly one output relay, got {len(outputs)}"
-            )
-        self._output = outputs[0]
         self._range = self._attr_native_max_value - self._attr_native_min_value
         self._attr_native_value = config.get(CONF_MINIMUM, DEFAULT_MIN_VALUE)
-        raw_period = config.get(CONF_MIN_CYCLE_PERIOD)
-        period_s: float | None = None
-        if raw_period is not None:
-            period_s = _as_timedelta(raw_period, DEFAULT_SWITCH_TIME).total_seconds()
-            if period_s < 2.0 * self._dwell.total_seconds():
-                _LOGGER.warning(
-                    "minimal_cycle_period %s smaller than 2x dwell %s, clamped",
-                    _as_timedelta(raw_period, DEFAULT_SWITCH_TIME),
-                    self._dwell,
-                )
-                period_s = None  # Tracker falls back to 2x dwell
-        self._tracker = Tracker(
-            dwell_s=self._dwell.total_seconds(),
-            min_cycle_s=period_s,
-        )
-        self._min_period = self._tracker.min_cycle
+        self._tracker = tracker
         self._listener_tick = None
         super().__init__()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info for the relay device."""
+        return device_info_for(self._output, self._attr_name)
 
     def _duty(self, value: float) -> float:
         """Normalize a native value to duty 0..1."""
@@ -184,23 +180,25 @@ class TrackingPWMEntity(RestoreNumber):
     async def async_added_to_hass(self) -> None:
         """Handle entity about to be added to hass event."""
         await super().async_added_to_hass()
+        # Restore setpoint; the debt restarts at 0 and re-derives the relay.
         if last_data := await self.async_get_last_number_data():
             self._attr_native_value = float(last_data.native_value)
 
         self._listener_tick = async_track_time_interval(
-            self.hass, self._async_tick, self._interval
+            self._hass, self._async_tick, self._interval
         )
 
+        # After full startup, evaluate once to assert the relay state.
         async def _async_startup(_event=None):
             await self._async_evaluate(
                 dt_util.utcnow().replace(microsecond=0), force=True
             )
             self.async_write_ha_state()
 
-        if self.hass.state == CoreState.running:
+        if self._hass.state == CoreState.running:
             await _async_startup()
         else:
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
+            self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle entity about to be removed from hass."""
@@ -209,13 +207,24 @@ class TrackingPWMEntity(RestoreNumber):
             self._listener_tick()
             self._listener_tick = None
 
+    async def async_set_interval(self, seconds: float) -> None:
+        """Change the evaluation interval live (config dial)."""
+        seconds = max(1.0, float(seconds))
+        self._interval = timedelta(seconds=seconds)
+        if self._listener_tick:
+            self._listener_tick()
+            self._listener_tick = None
+        self._listener_tick = async_track_time_interval(
+            self._hass, self._async_tick, self._interval
+        )
+
     @property
     def should_poll(self) -> bool:
         """No polling needed."""
         return False
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set new wanted value and evaluate immediately."""
+        """Set new wanted duty and evaluate immediately."""
         if isnan(value):
             _LOGGER.warning("Invalid value for tracking_pwm: %s", value)
             return
@@ -229,7 +238,7 @@ class TrackingPWMEntity(RestoreNumber):
         self.async_write_ha_state()
 
     async def _async_evaluate(self, now, force: bool = False) -> bool:
-        """Advance the tracker and switch the relay on change."""
+        """Advance the tracker, switch the relay on change, notify sensors."""
         _, changed = self._tracker.update(now, self._duty(self._attr_native_value))
         if changed or force:
             await self._hass.services.async_call(
@@ -238,15 +247,15 @@ class TrackingPWMEntity(RestoreNumber):
                 {ATTR_ENTITY_ID: self._output},
                 True,
             )
-            return True
-        return False
+        self._tracker.notify()
+        return changed
 
     @property
     def capability_attributes(self) -> dict[str, Any]:
         """Return capability attributes."""
         attr = super().capability_attributes
-        attr[ATTR_MIN_SWITCH_TIME] = str(self._dwell)
-        attr[ATTR_MIN_CYCLE_PERIOD] = str(timedelta(seconds=self._min_period))
+        attr[ATTR_MIN_SWITCH_TIME] = str(timedelta(seconds=self._tracker.dwell))
+        attr[ATTR_MIN_CYCLE_PERIOD] = str(timedelta(seconds=self._tracker.min_cycle))
         attr[ATTR_UPDATE_INTERVAL] = str(self._interval)
         return attr
 
@@ -265,3 +274,109 @@ class TrackingPWMEntity(RestoreNumber):
             ATTR_LAST_OFF_DURATION: self._tracker.last_off_duration,
             ATTR_SWITCH_COUNT: self._tracker.switch_count,
         }
+
+
+class _DialBase(Number):
+    """Base class for live tuning dials (config entity category)."""
+
+    _key = "dial"
+    _label = "Dial"
+    _min = 0.0
+    _max = 3600.0
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        entry_id: str,
+        output: str,
+        name: str,
+        tracker: Tracker,
+        initial: float,
+    ) -> None:
+        """Initialize a tuning dial."""
+        self._hass = hass
+        self._output = output
+        self._device_name = name
+        self._tracker = tracker
+        self._attr_name = f"{name} {self._label}"
+        self._attr_unique_id = f"{entry_id}_{self._key}"
+        self._attr_native_min_value = self._min
+        self._attr_native_max_value = self._max
+        self._attr_native_step = 1.0
+        self._attr_mode = MODE_BOX
+        self._attr_entity_category = EntityCategory.CONFIG
+        self._attr_native_value = float(initial)
+        super().__init__()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info for the relay device."""
+        return device_info_for(self._output, self._device_name)
+
+    @property
+    def should_poll(self) -> bool:
+        """No polling needed."""
+        return False
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Apply the new value live and store it."""
+        if isnan(value):
+            _LOGGER.warning("Invalid value for tracking_pwm %s: %s", self._key, value)
+            return
+        await self._async_apply(value)
+        self._attr_native_value = float(value)
+        self.async_write_ha_state()
+
+    async def _async_apply(self, value: float) -> None:
+        """Apply the value to the running tracker (overridden)."""
+        raise NotImplementedError
+
+
+class DwellDial(_DialBase):
+    """Live dwell guard in seconds."""
+
+    _key = "dwell"
+    _label = "dwell"
+
+    async def _async_apply(self, value: float) -> None:
+        """Apply the dwell live."""
+        self._tracker.configure(dwell_s=max(0.0, float(value)))
+
+
+class CycleDial(_DialBase):
+    """Live minimum cycle period in seconds (0 restores auto = 2x dwell)."""
+
+    _key = "min_cycle"
+    _label = "minimum cycle"
+
+    async def _async_apply(self, value: float) -> None:
+        """Apply the minimum cycle period live."""
+        value = float(value)
+        self._tracker.configure(
+            min_cycle_s=value if value > 0 else 2.0 * self._tracker.dwell
+        )
+
+
+class IntervalDial(_DialBase):
+    """Live evaluation interval in seconds."""
+
+    _key = "update_interval"
+    _label = "update interval"
+    _min = 1.0
+    _max = 3600.0
+
+    def __init__(self, hass, entry_id, output, name, tracker, setpoint) -> None:
+        """Initialize the interval dial with a link to the setpoint entity."""
+        self._setpoint = setpoint
+        super().__init__(
+            hass,
+            entry_id,
+            output,
+            name,
+            tracker,
+            setpoint._interval.total_seconds(),
+        )
+
+    async def _async_apply(self, value: float) -> None:
+        """Re-arm the setpoint evaluation timer."""
+        await self._setpoint.async_set_interval(value)
