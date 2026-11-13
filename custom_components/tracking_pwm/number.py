@@ -32,7 +32,6 @@ from homeassistant.core import CoreState, HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, DiscoveryTypeInfo
 import homeassistant.util.dt as dt_util
 
 from .const import (
@@ -103,9 +102,9 @@ async def async_setup_entry(
 
 async def async_setup_platform(
     hass: HomeAssistant,
-    config: ConfigType,
+    config: dict,
     async_add_entities: AddEntitiesCallback,
-    _discovery_info: DiscoveryTypeInfo | None = None,
+    _discovery_info: Any | None = None,
 ) -> None:
     """Set up the slow PWM number platform."""
     async_add_entities([TrackingPWMEntity(hass, config, config.get(CONF_UNIQUE_ID))])
