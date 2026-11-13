@@ -45,9 +45,9 @@ and `output_states` the relay.
 ```yaml
 number:
   - platform: tracking_pwm
-    name: Floorheater living room
+    name: Example heater
     outputs:
-      - "switch.living_room_group1"
+      - "switch.example_heater"
     minimum: 0
     maximum: 100
     minimal_switch_time: {'minutes': 2, 'seconds': 0}
@@ -55,7 +55,7 @@ number:
     update_interval: {'seconds': 30}
     step: 1
     mode: "auto"
-    unique_id: "floorheater_pwm"
+    unique_id: "example_heater_pwm"
 ```
 
 | Parameter | Required | Default | Meaning |
