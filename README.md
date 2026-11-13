@@ -72,6 +72,70 @@ Writes (`number.set_value`, e.g. from a PID controller every 30s) are
 evaluated immediately; the periodic tick keeps the dither going when the
 PID is quiet. Service calls fire only on actual relay flips.
 
+## Theory
+
+The controller is a first-order error-feedback (sigma-delta / Bresenham)
+modulator. Let `w ∈ [0,1]` be the wanted duty and `u ∈ {0,1}` the relay
+state. Every evaluation integrates the delivery error:
+
+```
+debt += (u - w) * dt            # duty-seconds, + means over-delivered
+relay = ON  iff  w > 0 and debt <= 0
+```
+
+**Exactness.** As long as the debt stays bounded, the long-run average is
+exact by construction:
+
+```
+mean(u - w) = (debt(T) - debt(0)) / T  ->  0   as T -> infinity
+```
+
+Boundedness follows from the rule itself: the relay can only stay ON while
+`debt <= 0` (each ON tick adds `(1-w)*dt > 0`) and only stay OFF while
+`debt > 0` (each OFF tick subtracts `w*dt`), so the integrator is forced
+to turn around within roughly one dwell of crossing zero. The clamp
+(`max(8*dwell, 2*min_cycle, 600)` duty-seconds) is pure anti-windup for
+pathological cases.
+
+**Dwell and cycle period as minimum-pulse quantizers.** The dwell guard
+(`minimal_switch_time`) forbids flips faster than the relay can follow;
+the minimum cycle period forbids new cycles faster than its setting. Both
+defer a switch, never cancel it — the debt keeps integrating the actual
+output in the meantime and the flipped phase is stretched until the books
+balance. Result: mid-range duties dither at the fastest allowed rate
+(50% with 2min dwell = 2min ON / 2min OFF), while 5% becomes one 2min pulse
+per ~40min. Same average, far less switching than a fixed grid.
+
+**Limit cycles, not fixed cycles.** There is no cycle anchor: the period
+emerges from the setpoint (U-shaped: ~4min at 50%, ~40min at 5% or 95%
+with 2min dwell). This is the classic behavior of undithered first-order
+sigma-delta modulators; here the dwell and debt shape it into
+relay-friendly patterns instead of idle tones.
+
+**Literature.** The modulator itself is textbook: a software first-order
+sigma-delta is "increment a variable with the commanded number, then
+subtract the number actually applied" ([Embedded, 2004][1]); the same
+accumulator drives Bresenham line drawing and has long been used to dither
+heaters ([EE StackExchange, 2014][2]). Limit-cycle/tonal behavior of
+undithered first-order loops is analyzed in [Reiss & Sandler (2003)][3].
+Minimum-pulse control of the same structure is even patented ([US7830289B2,
+2010][4]) — our dwell + debt is that idea in software. The same short-pulse
+problem appears in home-automation PWM: openHAB's PWM module debates duty
+limits for burner protection ([openhab#12196][5]), Marlin weighed
+sigma-delta heater PWM against MOSFET heating and AVR limits ([Marlin#12806][6]),
+and HA PID thermostats visibly stretch pulses under `min_cycle_duration`
+instead of repaying them. Cycle-anchored designs (ESPHome `slow_pwm`,
+`HASmartThermostat`) quantize duty onto a fixed grid; this integration
+replaces the grid with the error integral, so the average is exact at any
+duty with any dwell.
+
+[1]: https://www.embedded.com/sigma-delta-techniques-extend-dac-resolution/
+[2]: https://electronics.stackexchange.com/questions/127064/what-are-some-problems-with-running-a-heating-element-in-pwm-mode
+[3]: https://joshreiss.github.io/documents/2003/ReissSandler-2003-AES115.pdf
+[4]: https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/7830289
+[5]: https://github.com/openhab/openhab-addons/issues/12196
+[6]: https://github.com/MarlinFirmware/Marlin/issues/12806
+
 ## Development
 
 ```bash
