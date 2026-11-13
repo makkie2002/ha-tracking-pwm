@@ -1,8 +1,9 @@
 """Pure sigma-delta tracking PWM for a single relay.
 
 Bresenham-style error feedback: each evaluation integrates the delivery
-error ``debt += (actual - wanted) * dt``. The relay is ON whenever heat is
-owed (debt <= 0 and wanted > 0) and OFF whenever over-delivery is unpaid
+error ``debt += (actual - wanted) * dt``. The relay is ON whenever output
+is owed (debt <= 0 and wanted > 0) and OFF whenever over-delivery is
+unpaid
 (debt > 0). A dwell guard enforces minimum on/off times for relay
 protection and a minimum cycle period caps the switching rate; the debt
 repays both exactly, so the long-term average equals wanted at any duty.

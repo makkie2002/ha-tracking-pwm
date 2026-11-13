@@ -9,7 +9,7 @@ Each evaluation integrates the delivery error:
 debt += (actual - wanted) * dt
 ```
 
-The relay is ON whenever heat is owed (`debt <= 0` and wanted > 0) and OFF
+The relay is ON whenever output is owed (`debt <= 0` and wanted > 0) and OFF
 whenever over-delivery is unpaid (`debt > 0`). Two guards keep it
 relay-friendly:
 
@@ -45,9 +45,9 @@ and `output_states` the relay.
 ```yaml
 number:
   - platform: tracking_pwm
-    name: Example heater
+    name: Example load
     outputs:
-      - "switch.example_heater"
+      - "switch.example_load"
     minimum: 0
     maximum: 100
     minimal_switch_time: {'minutes': 2, 'seconds': 0}
@@ -55,7 +55,7 @@ number:
     update_interval: {'seconds': 30}
     step: 1
     mode: "auto"
-    unique_id: "example_heater_pwm"
+    unique_id: "example_load_pwm"
 ```
 
 | Parameter | Required | Default | Meaning |
