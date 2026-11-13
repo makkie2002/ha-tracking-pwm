@@ -41,7 +41,9 @@ and `output_states` the relay.
 
 Settings -> Devices & Services -> Add Integration -> search for
 "Tracking PWM". Pick the output switch and tune the parameters; everything
-can later be changed under Configure.
+can later be changed under Configure. Do not configure the same switch
+in YAML and in the UI at the same time — the two entities would fight
+over one relay.
 
 ### Manual
 
