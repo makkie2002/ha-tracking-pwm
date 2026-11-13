@@ -24,9 +24,18 @@ the wanted duty at any setpoint** — there is no deadband error and no
 cycle anchor to fall behind. At 50% with defaults the relay runs a
 2min ON / 2min OFF metronome; at 5% it fires one 2min pulse per ~40min.
 
-The number state always shows the wanted value; the `delivery_debt`
-attribute (duty-seconds, + means over-delivered) shows the integrator state
-and `output_states` the relay.
+The number state always shows the wanted value. Diagnostics attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `output_states` | Relay entity_id → on/off |
+| `wanted_duty` | Wanted duty 0..1 (comparator input) |
+| `delivery_debt` | Integrated over-delivery, in seconds of full output (+ means coasting on past over-delivery) |
+| `seconds_since_switch` | Seconds since the last relay flip (`None` before the first) |
+| `dwell_remaining` | Seconds until the dwell guard releases; > 0 means the relay is being held |
+| `cycle_remaining` | Seconds until a new cycle may start; > 0 means the cycle gate is holding |
+| `last_on_duration` / `last_off_duration` | Length in seconds of the most recent completed on/off phase (`None` until one completes) |
+| `switch_count` | Total relay flips since start (wear odometer) |
 
 ## Installation
 

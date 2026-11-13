@@ -43,6 +43,9 @@ class Tracker:
         self.debt_limit = float(debt_limit_s)
         self.debt = 0.0
         self.relay_on = False
+        self.switch_count = 0
+        self.last_on_duration: float | None = None
+        self.last_off_duration: float | None = None
         self._t_last = None
         self._t_switch = None
         self._t_cycle = None
@@ -70,14 +73,44 @@ class Tracker:
         want_on = wanted > 0.0 and self.debt <= 0.0
         if want_on == self.relay_on:
             return self.relay_on, False
-        if self._t_switch is not None and self.dwell > 0.0:
-            if (now - self._t_switch).total_seconds() < self.dwell:
-                return self.relay_on, False
+        dwell_s = self.dwell
+        if (
+            self._t_switch is not None
+            and dwell_s > 0
+            and (now - self._t_switch).total_seconds() < dwell_s
+        ):
+            return self.relay_on, False
         if want_on and self._t_cycle is not None:
             if (now - self._t_cycle).total_seconds() < self.min_cycle:
                 return self.relay_on, False
+        if self._t_switch is not None:
+            phase = (now - self._t_switch).total_seconds()
+            if self.relay_on:
+                self.last_on_duration = phase
+            else:
+                self.last_off_duration = phase
         self.relay_on = want_on
+        self.switch_count += 1
         self._t_switch = now
         if want_on:
             self._t_cycle = now
         return self.relay_on, True
+
+    def seconds_since(self, now, which: str) -> float | None:
+        """Seconds since the last switch/cycle event, or None if never."""
+        stamp = {"switch": self._t_switch, "cycle": self._t_cycle}.get(which)
+        if stamp is None:
+            return None
+        return max(0.0, (now - stamp).total_seconds())
+
+    def hold_remaining(self, now, which: str) -> float:
+        """Seconds until the dwell/cycle guard releases (0 when not holding)."""
+        if which == "dwell":
+            stamp, span = self._t_switch, self.dwell
+        elif which == "cycle":
+            stamp, span = self._t_cycle, self.min_cycle
+        else:
+            raise ValueError(f"unknown guard: {which}")
+        if stamp is None:
+            return 0.0
+        return max(0.0, span - (now - stamp).total_seconds())

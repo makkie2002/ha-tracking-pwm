@@ -35,11 +35,18 @@ from homeassistant.helpers.event import async_track_time_interval
 import homeassistant.util.dt as dt_util
 
 from .const import (
+    ATTR_CYCLE_REMAINING,
     ATTR_DELIVERY_DEBT,
+    ATTR_DWELL_REMAINING,
+    ATTR_LAST_OFF_DURATION,
+    ATTR_LAST_ON_DURATION,
     ATTR_MIN_CYCLE_PERIOD,
     ATTR_MIN_SWITCH_TIME,
     ATTR_OUTPUT_STATES,
+    ATTR_SECONDS_SINCE_SWITCH,
+    ATTR_SWITCH_COUNT,
     ATTR_UPDATE_INTERVAL,
+    ATTR_WANTED_DUTY,
     CONF_MIN_CYCLE_PERIOD,
     CONF_MIN_SWITCH_TIME,
     CONF_OUTPUTS,
@@ -246,7 +253,15 @@ class TrackingPWMEntity(RestoreNumber):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes."""
+        now = dt_util.utcnow().replace(microsecond=0)
         return {
             ATTR_OUTPUT_STATES: {self._output: self._tracker.relay_on},
+            ATTR_WANTED_DUTY: self._duty(self._attr_native_value),
             ATTR_DELIVERY_DEBT: self._tracker.debt,
+            ATTR_SECONDS_SINCE_SWITCH: self._tracker.seconds_since(now, "switch"),
+            ATTR_DWELL_REMAINING: self._tracker.hold_remaining(now, "dwell"),
+            ATTR_CYCLE_REMAINING: self._tracker.hold_remaining(now, "cycle"),
+            ATTR_LAST_ON_DURATION: self._tracker.last_on_duration,
+            ATTR_LAST_OFF_DURATION: self._tracker.last_off_duration,
+            ATTR_SWITCH_COUNT: self._tracker.switch_count,
         }

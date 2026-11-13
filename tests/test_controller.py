@@ -119,3 +119,24 @@ def test_wanted_clamped_to_unit_interval():
     now = T0()
     assert tr.update(now, 999.0)[0] is True
     assert tr.update(now, -5.0)[0] is False
+
+
+def test_diagnostics_bookkeeping():
+    tr = Tracker(dwell_s=120.0)
+    now = T0()
+    assert tr.update(now, 0.5) == (True, True)
+    assert tr.switch_count == 1
+    assert tr.last_on_duration is None  # no completed phase yet
+    assert tr.last_off_duration is None
+    assert tr.seconds_since(now, "switch") == 0.0
+    assert tr.seconds_since(now, "cycle") == 0.0
+    assert tr.hold_remaining(now, "dwell") == 120.0
+    assert tr.hold_remaining(now, "cycle") == 240.0  # auto 2x dwell
+    assert tr.update(now + timedelta(seconds=120), 0.5) == (False, True)
+    assert tr.last_on_duration == 120.0
+    assert tr.switch_count == 2
+    later = now + timedelta(seconds=150)
+    assert tr.seconds_since(later, "switch") == 30.0
+    assert tr.hold_remaining(later, "dwell") == 90.0
+    with pytest.raises(ValueError):
+        tr.hold_remaining(later, "bogus")
