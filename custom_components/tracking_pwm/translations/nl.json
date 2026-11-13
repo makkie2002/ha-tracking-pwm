@@ -1,51 +1,51 @@
 {
-  "config": {
-    "step": {
-      "user": {
-        "data": {
-          "maximum": "Maximum",
-          "minimal_cycle_period": "Minimale cyclusperiode",
-          "minimal_switch_time": "Minimale tijd dat het relais aan- of uit blijft",
-          "minimum": "Minimum",
-          "mode": "Modus",
-          "name": "Naam",
-          "outputs": "Output schakelaar entiteit",
-          "step": "Stapgrootte",
-          "update_interval": "Evaluatie-interval"
-        },
-        "data_description": {
-          "maximum": "Waarde die volledig aan betekent (duty 1).",
-          "minimal_cycle_period": "Minimale tijd tussen cyclusstarts. Leeg = tweemaal de dwell-tijd.",
-          "minimal_switch_time": "Kortste tijd dat het relais aan of uit blijft voordat het mag schakelen.",
-          "minimum": "Waarde die volledig uit betekent (duty 0).",
-          "mode": "Modus van de gebruikersinterface.",
-          "step": "Stapgrootte van het nummer."
-        },
-        "description": "Maak een nummer dat een enkele schakelaar aanstuurt met sigma-delta volgregelende PWM. Het relais volgt de gewenste duty; de delivery-debt integrator houdt het langetermijngemiddelde exact.",
-        "title": "Stuur een schakelaar aan met sigma-delta PWM"
-      }
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "data": {
-          "maximum": "Maximum",
-          "minimal_cycle_period": "Minimale cyclusperiode",
-          "minimal_switch_time": "Minimale tijd dat het relais aan- of uit blijft",
-          "minimum": "Minimum",
-          "mode": "Modus",
-          "outputs": "Output schakelaar entiteit",
-          "step": "Stapgrootte",
-          "update_interval": "Evaluatie-interval"
-        },
-        "data_description": {
-          "maximum": "Waarde die volledig aan betekent (duty 1).",
-          "minimum": "Waarde die volledig uit betekent (duty 0).",
-          "mode": "Modus van de gebruikersinterface."
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "maximum": "Maximum",
+                    "minimal_cycle_period": "Minimale cyclusperiode",
+                    "minimal_switch_time": "Minimale tijd dat het relais aan- of uit blijft",
+                    "minimum": "Minimum",
+                    "mode": "Modus",
+                    "name": "Naam",
+                    "outputs": "Output schakelaar entiteit",
+                    "step": "Stapgrootte",
+                    "update_interval": "Evaluatie-interval"
+                },
+                "data_description": {
+                    "maximum": "Waarde die volledig aan betekent (duty 1).",
+                    "minimal_cycle_period": "Minimale tijd tussen cyclusstarts. Leeg = tweemaal de dwell-tijd.",
+                    "minimal_switch_time": "Kortste tijd dat het relais aan of uit blijft voordat het mag schakelen.",
+                    "minimum": "Waarde die volledig uit betekent (duty 0).",
+                    "mode": "Modus van de gebruikersinterface.",
+                    "step": "Stapgrootte van het nummer."
+                },
+                "description": "Maak een nummer dat een enkele schakelaar aanstuurt met sigma-delta volgregelende PWM. Het relais volgt de gewenste duty; de delivery-debt integrator houdt het langetermijngemiddelde exact.",
+                "title": "Tracking PWM"
+            }
         }
-      }
-    }
-  },
-  "title": "Stuur een schakelaar aan met sigma-delta PWM"
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "maximum": "Maximum",
+                    "minimal_cycle_period": "Minimale cyclusperiode",
+                    "minimal_switch_time": "Minimale tijd dat het relais aan- of uit blijft",
+                    "minimum": "Minimum",
+                    "mode": "Modus",
+                    "outputs": "Output schakelaar entiteit",
+                    "step": "Stapgrootte",
+                    "update_interval": "Evaluatie-interval"
+                },
+                "data_description": {
+                    "maximum": "Waarde die volledig aan betekent (duty 1).",
+                    "minimum": "Waarde die volledig uit betekent (duty 0).",
+                    "mode": "Modus van de gebruikersinterface."
+                }
+            }
+        }
+    },
+    "title": "Tracking PWM"
 }
