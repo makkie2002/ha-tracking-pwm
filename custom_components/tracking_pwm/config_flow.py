@@ -24,9 +24,11 @@ from .const import (
     CONF_OUTPUTS,
     CONF_STEP,
     CONF_UPDATE_INTERVAL,
+    CONF_WANTED_SMOOTHING,
     DEFAULT_MODE,
     DEFAULT_SWITCH_TIME,
     DEFAULT_UPDATE_INTERVAL,
+    DEFAULT_WANTED_SMOOTHING,
     DOMAIN,
     MODE_AUTO,
     MODE_BOX,
@@ -62,6 +64,9 @@ OPTIONS_SCHEMA = vol.Schema(
         vol.Optional(CONF_MIN_CYCLE_PERIOD): selector.DurationSelector(),
         vol.Optional(
             CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
+        ): selector.DurationSelector(),
+        vol.Optional(
+            CONF_WANTED_SMOOTHING, default=DEFAULT_WANTED_SMOOTHING
         ): selector.DurationSelector(),
         vol.Optional(CONF_STEP, default=DEFAULT_STEP): selector.NumberSelector(
             selector.NumberSelectorConfig(

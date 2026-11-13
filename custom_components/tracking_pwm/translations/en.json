@@ -11,7 +11,8 @@
                     "name": "Name",
                     "outputs": "Output switch entity",
                     "step": "Step size",
-                    "update_interval": "Evaluation interval"
+                    "update_interval": "Evaluation interval",
+                    "wanted_smoothing": "Wanted smoothing"
                 },
                 "data_description": {
                     "maximum": "Value that means fully on (duty 1).",
@@ -19,7 +20,8 @@
                     "minimal_switch_time": "Shortest time the relay stays on or off before it may switch again.",
                     "minimum": "Value that means fully off (duty 0).",
                     "mode": "Mode of user interface elements.",
-                    "step": "Step size of the number."
+                    "step": "Step size of the number.",
+                    "wanted_smoothing": "Time constant of the slow low-pass on the wanted duty (diagnostic only, never drives the relay)."
                 },
                 "description": "Create a number that drives a single switch with sigma-delta tracking PWM. The relay follows the wanted duty; the delivery-debt integrator keeps the long-term average exact.",
                 "title": "Tracking PWM"
@@ -37,7 +39,8 @@
                     "mode": "Mode",
                     "outputs": "Output switch entity",
                     "step": "Step size",
-                    "update_interval": "Evaluation interval"
+                    "update_interval": "Evaluation interval",
+                    "wanted_smoothing": "Wanted smoothing"
                 },
                 "data_description": {
                     "maximum": "Value that means fully on (duty 1).",

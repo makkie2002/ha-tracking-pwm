@@ -174,3 +174,23 @@ def test_listeners_notified():
     tr.notify()
     assert calls == [1]
     tr.unsubscribe(cb)  # no error when absent
+
+
+def test_wanted_smoothing_converges():
+    tr = Tracker(dwell_s=0.0, wanted_tau_s=3600.0)
+    now = T0()
+    assert tr.update(now, 0.0) == (False, False)
+    assert tr.wanted_smooth == 0.0  # first sample latched, no ramp
+    assert tr.update(now + timedelta(seconds=3600), 1.0) == (True, True)
+    assert tr.wanted_smooth == pytest.approx(1 - 2.718281828 ** -1, abs=0.001)
+    tr.update(now + timedelta(seconds=7200), 1.0)
+    assert tr.wanted_smooth == pytest.approx(1 - 2.718281828 ** -2, abs=0.001)
+
+
+def test_wanted_smoothing_disabled_tracks_raw():
+    tr = Tracker(dwell_s=0.0, wanted_tau_s=0)
+    now = T0()
+    tr.update(now, 0.2)
+    assert tr.wanted_smooth == 0.2
+    tr.update(now + timedelta(seconds=30), 0.9)
+    assert tr.wanted_smooth == 0.9

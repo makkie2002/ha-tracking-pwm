@@ -8,11 +8,16 @@ unpaid
 protection and a minimum cycle period caps the switching rate; the debt
 repays both exactly, so the long-term average equals wanted at any duty.
 
+A slow diagnostic low-pass of the setpoint (``wanted_smooth``) is
+maintained alongside the controller but never drives the relay.
+
 This module has no Home Assistant dependencies and is fully unit-testable.
 Time is expressed in seconds; ``now`` only needs to support subtraction
 yielding an object with ``total_seconds()`` (e.g. ``datetime``).
 """
 from __future__ import annotations
+
+from math import exp
 
 
 class Tracker:
@@ -23,6 +28,7 @@ class Tracker:
         dwell_s: float = 120.0,
         min_cycle_s: float | None = None,
         debt_limit_s: float | None = None,
+        wanted_tau_s: float | None = 3600.0,
     ) -> None:
         """Initialize the tracker.
 
@@ -31,6 +37,9 @@ class Tracker:
             Defaults to twice the dwell; smaller values are clamped to it.
         debt_limit_s: anti-windup clamp for the integrator. Defaults to
             max(8 * dwell, 2 * min_cycle, 600).
+        wanted_tau_s: time constant in seconds for the diagnostic low-pass
+            of the wanted duty. Defaults to one hour; 0 or negative
+            disables filtering (tracks raw). Never drives the relay.
         """
         dwell_s = max(0.0, float(dwell_s))
         if min_cycle_s is None:
@@ -44,6 +53,10 @@ class Tracker:
         self.debt = 0.0
         self.relay_on = False
         self.wanted = 0.0
+        self.wanted_smooth: float | None = None
+        self.wanted_tau = (
+            max(0.0, float(wanted_tau_s)) if wanted_tau_s else 0.0
+        )
         self.switch_count = 0
         self.last_on_duration: float | None = None
         self.last_off_duration: float | None = None
@@ -67,6 +80,13 @@ class Tracker:
             if dt < 0.0:
                 dt = 0.0
         self._t_last = now
+        if self.wanted_smooth is None or self.wanted_tau <= 0.0:
+            # Latch the first sample (and follow raw when disabled) so
+            # there is no hour-long ramp from zero after a restart.
+            self.wanted_smooth = wanted
+        elif dt > 0.0:
+            alpha = 1.0 - exp(-dt / self.wanted_tau)
+            self.wanted_smooth += alpha * (wanted - self.wanted_smooth)
         if dt > 0.0:
             self.debt += ((1.0 if self.relay_on else 0.0) - wanted) * dt
             if self.debt > self.debt_limit:

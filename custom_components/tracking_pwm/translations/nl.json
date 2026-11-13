@@ -11,7 +11,8 @@
                     "name": "Naam",
                     "outputs": "Output schakelaar entiteit",
                     "step": "Stapgrootte",
-                    "update_interval": "Evaluatie-interval"
+                    "update_interval": "Evaluatie-interval",
+                    "wanted_smoothing": "Gewenste filtering"
                 },
                 "data_description": {
                     "maximum": "Waarde die volledig aan betekent (duty 1).",
@@ -19,7 +20,8 @@
                     "minimal_switch_time": "Kortste tijd dat het relais aan of uit blijft voordat het mag schakelen.",
                     "minimum": "Waarde die volledig uit betekent (duty 0).",
                     "mode": "Modus van de gebruikersinterface.",
-                    "step": "Stapgrootte van het nummer."
+                    "step": "Stapgrootte van het nummer.",
+                    "wanted_smoothing": "Tijdconstante van het trage laagdoorlaatfilter op de gewenste duty (alleen diagnose, stuurt het relais nooit aan)."
                 },
                 "description": "Maak een nummer dat een enkele schakelaar aanstuurt met sigma-delta volgregelende PWM. Het relais volgt de gewenste duty; de delivery-debt integrator houdt het langetermijngemiddelde exact.",
                 "title": "Tracking PWM"
@@ -37,7 +39,8 @@
                     "mode": "Modus",
                     "outputs": "Output schakelaar entiteit",
                     "step": "Stapgrootte",
-                    "update_interval": "Evaluatie-interval"
+                    "update_interval": "Evaluatie-interval",
+                    "wanted_smoothing": "Gewenste filtering"
                 },
                 "data_description": {
                     "maximum": "Waarde die volledig aan betekent (duty 1).",

@@ -7,7 +7,9 @@ from .const import (
     CONF_MIN_CYCLE_PERIOD,
     CONF_MIN_SWITCH_TIME,
     CONF_OUTPUTS,
+    CONF_WANTED_SMOOTHING,
     DEFAULT_SWITCH_TIME,
+    DEFAULT_WANTED_SMOOTHING,
     DOMAIN,
     as_timedelta,
     normalize_outputs,
@@ -28,7 +30,10 @@ def build_tracker(options) -> Tracker:
         if raw_period
         else None
     )
-    return Tracker(dwell_s=dwell, min_cycle_s=min_cycle)
+    wanted_tau = as_timedelta(
+        options.get(CONF_WANTED_SMOOTHING), DEFAULT_WANTED_SMOOTHING
+    ).total_seconds()
+    return Tracker(dwell_s=dwell, min_cycle_s=min_cycle, wanted_tau_s=wanted_tau)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

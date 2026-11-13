@@ -57,14 +57,17 @@ from .const import (
     ATTR_SWITCH_COUNT,
     ATTR_UPDATE_INTERVAL,
     ATTR_WANTED_DUTY,
+    ATTR_WANTED_DUTY_FILTERED,
     CONF_MIN_CYCLE_PERIOD,
     CONF_MIN_SWITCH_TIME,
     CONF_OUTPUTS,
     CONF_STEP,
     CONF_UPDATE_INTERVAL,
+    CONF_WANTED_SMOOTHING,
     DEFAULT_MODE,
     DEFAULT_SWITCH_TIME,
     DEFAULT_UPDATE_INTERVAL,
+    DEFAULT_WANTED_SMOOTHING,
     DOMAIN,
     MODE_AUTO,
     MODE_BOX,
@@ -91,6 +94,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_MIN_CYCLE_PERIOD): cv.time_period_dict,
         vol.Optional(
             CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
+        ): cv.time_period_dict,
+        vol.Optional(
+            CONF_WANTED_SMOOTHING, default=DEFAULT_WANTED_SMOOTHING
         ): cv.time_period_dict,
         vol.Optional(CONF_STEP, default=DEFAULT_STEP): cv.positive_float,
         vol.Optional(CONF_MODE, default=MODE_SLIDER): vol.In(
@@ -275,6 +281,7 @@ class TrackingPWMEntity(RestoreNumber):
         return {
             ATTR_OUTPUT_STATES: {self._output: self._tracker.relay_on},
             ATTR_WANTED_DUTY: self._duty(self._attr_native_value),
+            ATTR_WANTED_DUTY_FILTERED: self._tracker.wanted_smooth,
             ATTR_DELIVERY_DEBT: self._tracker.debt,
             ATTR_SECONDS_SINCE_SWITCH: self._tracker.seconds_since(now, "switch"),
             ATTR_DWELL_REMAINING: self._tracker.hold_remaining(now, "dwell"),

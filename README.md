@@ -31,6 +31,7 @@ The number state always shows the wanted value. Diagnostics attributes
 |---|---|
 | `output_states` | Relay entity_id → on/off |
 | `wanted_duty` | Wanted duty 0..1 (comparator input) |
+| `wanted_duty_filtered` | Slow (1h default) low-pass of the wanted duty — setpoint trend, diagnostic only |
 | `delivery_debt` | Integrated over-delivery, in seconds of full output (+ means coasting on past over-delivery) |
 | `seconds_since_switch` | Seconds since the last relay flip (`None` before the first) |
 | `dwell_remaining` | Seconds until the dwell guard releases; > 0 means the relay is being held |
@@ -51,10 +52,10 @@ Adding the integration via the UI creates one **device** per relay:
     immediately; `0` means automatic (2× dwell)
   * *update interval* (s) — re-evaluation tick, re-armed immediately
 * **Diagnostics**: a `relay` binary sensor plus sensors for delivery
-  debt, wanted duty, seconds since switch, dwell/cycle remaining, last
-  on/off durations and switch count. Because these are sensors (not just
-  attributes), they graph and record history; `switch_count` is a
-  total-increasing counter.
+  debt, wanted duty (instant and 1h-filtered trend), seconds since switch,
+  dwell/cycle remaining, last on/off durations and switch count. Because
+  these are sensors (not just attributes), they graph and record history;
+  `switch_count` is a total-increasing counter.
 
 YAML setups expose only the setpoint number (dials and sensors are
 UI-config-entry features).
@@ -94,6 +95,7 @@ number:
     minimal_switch_time: {'minutes': 2, 'seconds': 0}
     minimal_cycle_period: {'minutes': 10, 'seconds': 0}  # optional, default 2x dwell
     update_interval: {'seconds': 30}
+    wanted_smoothing: {'hours': 1, 'minutes': 0, 'seconds': 0}  # optional, 0 = raw
     step: 1
     mode: "auto"
     unique_id: "example_load_pwm"
@@ -107,6 +109,7 @@ number:
 | `minimal_switch_time` | no | 2min | Minimum relay on/off time (dwell, both directions) |
 | `minimal_cycle_period` | no | 2× dwell | Minimum time between cycle starts |
 | `update_interval` | no | 30s | Re-evaluation tick; keeps the average exact with no new writes |
+| `wanted_smoothing` | no | 1h | Time constant of a slow low-pass on the wanted duty (diagnostic only); `0` = raw |
 | `step` / `mode` / `unique_id` | no | 1 / slider | Standard number entity options |
 
 Writes (`number.set_value`, e.g. from a PID controller every 30s) are

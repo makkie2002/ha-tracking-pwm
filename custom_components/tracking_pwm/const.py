@@ -6,11 +6,13 @@ CONF_OUTPUTS = "outputs"
 CONF_MIN_SWITCH_TIME = "minimal_switch_time"
 CONF_MIN_CYCLE_PERIOD = "minimal_cycle_period"
 CONF_UPDATE_INTERVAL = "update_interval"
+CONF_WANTED_SMOOTHING = "wanted_smoothing"
 CONF_STEP = "step"
 
 ATTR_OUTPUT_STATES = "output_states"
 ATTR_DELIVERY_DEBT = "delivery_debt"
 ATTR_WANTED_DUTY = "wanted_duty"
+ATTR_WANTED_DUTY_FILTERED = "wanted_duty_filtered"
 ATTR_SECONDS_SINCE_SWITCH = "seconds_since_switch"
 ATTR_DWELL_REMAINING = "dwell_remaining"
 ATTR_CYCLE_REMAINING = "cycle_remaining"
@@ -28,6 +30,7 @@ MODE_AUTO = "auto"
 DEFAULT_MODE = MODE_SLIDER
 DEFAULT_SWITCH_TIME = {"minutes": 2}
 DEFAULT_UPDATE_INTERVAL = {"seconds": 30}
+DEFAULT_WANTED_SMOOTHING = {"hours": 1}
 
 
 def as_timedelta(value, default: dict):
