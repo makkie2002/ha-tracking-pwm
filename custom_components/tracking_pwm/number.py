@@ -13,9 +13,15 @@ from homeassistant.components.number import (
     DEFAULT_MIN_VALUE,
     DEFAULT_STEP,
     PLATFORM_SCHEMA,
-    Number,
     RestoreNumber,
 )
+
+try:
+    # New cores: consistent *Entity suffix like every other platform.
+    from homeassistant.components.number import NumberEntity as NumberBase
+except ImportError:
+    # Old cores: legacy alias.
+    from homeassistant.components.number import Number as NumberBase
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -276,7 +282,7 @@ class TrackingPWMEntity(RestoreNumber):
         }
 
 
-class _DialBase(Number):
+class _DialBase(NumberBase):
     """Base class for live tuning dials (config entity category)."""
 
     _key = "dial"
