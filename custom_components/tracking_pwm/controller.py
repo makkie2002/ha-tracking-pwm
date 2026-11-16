@@ -8,8 +8,11 @@ unpaid
 protection and a minimum cycle period caps the switching rate; the debt
 repays both exactly, so the long-term average equals wanted at any duty.
 
-A slow diagnostic low-pass of the setpoint (``wanted_smooth``) is
-maintained alongside the controller but never drives the relay.
+A slow diagnostic low-pass of the setpoint (``wanted_smooth``) and of the
+real relay output (``actual_smooth``) is maintained alongside the
+controller but never drives the relay. An optional debt die-out (leak
+toward zero with its own time constant) forgives stale owed/unpaid energy;
+at 0 it is disabled and the integrator is pure.
 
 This module has no Home Assistant dependencies and is fully unit-testable.
 Time is expressed in seconds; ``now`` only needs to support subtraction
@@ -29,6 +32,7 @@ class Tracker:
         min_cycle_s: float | None = None,
         debt_limit_s: float | None = None,
         wanted_tau_s: float | None = 3600.0,
+        debt_tau_s: float | None = 3600.0,
     ) -> None:
         """Initialize the tracker.
 
@@ -37,9 +41,13 @@ class Tracker:
             Defaults to twice the dwell; smaller values are clamped to it.
         debt_limit_s: anti-windup clamp for the integrator. Defaults to
             max(8 * dwell, 2 * min_cycle, 600).
-        wanted_tau_s: time constant in seconds for the diagnostic low-pass
-            of the wanted duty. Defaults to one hour; 0 or negative
-            disables filtering (tracks raw). Never drives the relay.
+        wanted_tau_s: time constant in seconds for the slow diagnostic
+            low-pass filters (wanted duty and actual duty). Defaults to one
+            hour; 0 or negative disables filtering (tracks raw). Never drives
+            the relay.
+        debt_tau_s: time constant in seconds for the delivery-debt die-out
+            (leak toward zero). Defaults to one hour; 0 or negative disables
+            the leak (pure integrator, exact long-term average).
         """
         dwell_s = max(0.0, float(dwell_s))
         if min_cycle_s is None:
@@ -54,9 +62,11 @@ class Tracker:
         self.relay_on = False
         self.wanted = 0.0
         self.wanted_smooth: float | None = None
+        self.actual_smooth: float | None = None
         self.wanted_tau = (
             max(0.0, float(wanted_tau_s)) if wanted_tau_s else 0.0
         )
+        self.debt_tau = max(0.0, float(debt_tau_s)) if debt_tau_s else 0.0
         self.switch_count = 0
         self.last_on_duration: float | None = None
         self.last_off_duration: float | None = None
@@ -87,7 +97,18 @@ class Tracker:
         elif dt > 0.0:
             alpha = 1.0 - exp(-dt / self.wanted_tau)
             self.wanted_smooth += alpha * (wanted - self.wanted_smooth)
+        actual = 1.0 if self.relay_on else 0.0
+        if self.actual_smooth is None or self.wanted_tau <= 0.0:
+            # Same filter, driven by the real relay output instead of the
+            # setpoint. Uses the pre-flip state: that is what drove this dt,
+            # consistent with the debt integral below.
+            self.actual_smooth = actual
+        elif dt > 0.0:
+            alpha = 1.0 - exp(-dt / self.wanted_tau)
+            self.actual_smooth += alpha * (actual - self.actual_smooth)
         if dt > 0.0:
+            if self.debt_tau > 0.0:
+                self.debt *= exp(-dt / self.debt_tau)
             self.debt += ((1.0 if self.relay_on else 0.0) - wanted) * dt
             if self.debt > self.debt_limit:
                 self.debt = self.debt_limit
@@ -139,12 +160,18 @@ class Tracker:
         return max(0.0, span - (now - stamp).total_seconds())
 
     def configure(
-        self, dwell_s: float | None = None, min_cycle_s: float | None = None
+        self,
+        dwell_s: float | None = None,
+        min_cycle_s: float | None = None,
+        debt_tau_s: float | None = None,
     ) -> dict:
-        """Live-update dwell/cycle guards; keeps all invariants.
+        """Live-update dwell/cycle guards and the debt die-out.
 
         min_cycle_s of None (or below 2x dwell) falls back to 2x dwell.
-        Returns the effective {"dwell": .., "min_cycle": ..} in seconds.
+        debt_tau_s of None leaves the die-out unchanged; 0 or negative
+        disables it (pure integrator).
+        Returns the effective {"dwell": .., "min_cycle": .., "debt_tau": ..}
+        in seconds.
         """
         if dwell_s is not None:
             self.dwell = max(0.0, float(dwell_s))
@@ -152,12 +179,18 @@ class Tracker:
             self.min_cycle = max(self.min_cycle, 2.0 * self.dwell)
         else:
             self.min_cycle = max(float(min_cycle_s), 2.0 * self.dwell)
+        if debt_tau_s is not None:
+            self.debt_tau = max(0.0, float(debt_tau_s)) if debt_tau_s else 0.0
         self.debt_limit = max(8.0 * self.dwell, 2.0 * self.min_cycle, 600.0)
         if self.debt > self.debt_limit:
             self.debt = self.debt_limit
         elif self.debt < -self.debt_limit:
             self.debt = -self.debt_limit
-        return {"dwell": self.dwell, "min_cycle": self.min_cycle}
+        return {
+            "dwell": self.dwell,
+            "min_cycle": self.min_cycle,
+            "debt_tau": self.debt_tau,
+        }
 
     def subscribe(self, callback) -> None:
         """Register a no-arg callback fired on every explicit notify()."""

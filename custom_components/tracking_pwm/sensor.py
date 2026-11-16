@@ -35,6 +35,7 @@ async def async_setup_entry(
             _DebtSensor(entry_id, output, name, tracker),
             _WantedSensor(entry_id, output, name, tracker),
             _WantedFilteredSensor(entry_id, output, name, tracker),
+            _DutyFilteredSensor(entry_id, output, name, tracker),
             _SecondsSinceSwitchSensor(entry_id, output, name, tracker),
             _DwellRemainingSensor(entry_id, output, name, tracker),
             _CycleRemainingSensor(entry_id, output, name, tracker),
@@ -147,6 +148,26 @@ class _WantedFilteredSensor(_DiagnosticSensor):
     def native_value(self) -> float | None:
         """Return the filtered wanted duty in percent, if sampled yet."""
         value = self._tracker.wanted_smooth
+        return None if value is None else round(value * 100.0, 1)
+
+
+class _DutyFilteredSensor(_DiagnosticSensor):
+    """Slow (1h default) low-pass of the real relay duty, in percent."""
+
+    _key = "duty_filtered"
+    _label = "duty filtered"
+
+    def __init__(self, entry_id, output, name, tracker):
+        """Initialize the filtered-duty sensor."""
+        super().__init__(entry_id, output, name, tracker)
+        self._attr_native_unit_of_measurement = PERCENTAGE
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_suggested_display_precision = 1
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the filtered real duty in percent, if sampled yet."""
+        value = self._tracker.actual_smooth
         return None if value is None else round(value * 100.0, 1)
 
 

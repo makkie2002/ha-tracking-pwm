@@ -12,7 +12,8 @@
                     "outputs": "Output schakelaar entiteit",
                     "step": "Stapgrootte",
                     "update_interval": "Evaluatie-interval",
-                    "wanted_smoothing": "Gewenste filtering"
+                    "duty_smoothing": "Duty-filtering",
+                    "debt_decay": "Vervaltijd delivery-schuld"
                 },
                 "data_description": {
                     "maximum": "Waarde die volledig aan betekent (duty 1).",
@@ -21,7 +22,8 @@
                     "minimum": "Waarde die volledig uit betekent (duty 0).",
                     "mode": "Modus van de gebruikersinterface.",
                     "step": "Stapgrootte van het nummer.",
-                    "wanted_smoothing": "Tijdconstante van het trage laagdoorlaatfilter op de gewenste duty (alleen diagnose, stuurt het relais nooit aan)."
+                    "duty_smoothing": "Tijdconstante van het trage laagdoorlaatfilter op de gewenste en echte duty (alleen diagnose).",
+                    "debt_decay": "Tijdconstante waarmee oude delivery-schuld naar nul wegebt (0 = pure integrator)."
                 },
                 "description": "Maak een nummer dat een enkele schakelaar aanstuurt met sigma-delta volgregelende PWM. Het relais volgt de gewenste duty; de delivery-debt integrator houdt het langetermijngemiddelde exact.",
                 "title": "Tracking PWM"
@@ -40,7 +42,8 @@
                     "outputs": "Output schakelaar entiteit",
                     "step": "Stapgrootte",
                     "update_interval": "Evaluatie-interval",
-                    "wanted_smoothing": "Gewenste filtering"
+                    "duty_smoothing": "Duty-filtering",
+                    "debt_decay": "Vervaltijd delivery-schuld"
                 },
                 "data_description": {
                     "maximum": "Waarde die volledig aan betekent (duty 1).",

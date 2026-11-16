@@ -46,7 +46,9 @@ import homeassistant.util.dt as dt_util
 
 from .const import (
     ATTR_CYCLE_REMAINING,
+    ATTR_DEBT_DECAY,
     ATTR_DELIVERY_DEBT,
+    ATTR_DUTY_FILTERED,
     ATTR_DWELL_REMAINING,
     ATTR_LAST_OFF_DURATION,
     ATTR_LAST_ON_DURATION,
@@ -58,12 +60,15 @@ from .const import (
     ATTR_UPDATE_INTERVAL,
     ATTR_WANTED_DUTY,
     ATTR_WANTED_DUTY_FILTERED,
+    CONF_DEBT_DECAY,
+    CONF_DUTY_SMOOTHING,
     CONF_MIN_CYCLE_PERIOD,
     CONF_MIN_SWITCH_TIME,
     CONF_OUTPUTS,
     CONF_STEP,
     CONF_UPDATE_INTERVAL,
     CONF_WANTED_SMOOTHING,
+    DEFAULT_DEBT_DECAY,
     DEFAULT_MODE,
     DEFAULT_SWITCH_TIME,
     DEFAULT_UPDATE_INTERVAL,
@@ -98,6 +103,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(
             CONF_WANTED_SMOOTHING, default=DEFAULT_WANTED_SMOOTHING
         ): cv.time_period_dict,
+        vol.Optional(CONF_DUTY_SMOOTHING): cv.time_period_dict,
+        vol.Optional(
+            CONF_DEBT_DECAY, default=DEFAULT_DEBT_DECAY
+        ): cv.time_period_dict,
         vol.Optional(CONF_STEP, default=DEFAULT_STEP): cv.positive_float,
         vol.Optional(CONF_MODE, default=MODE_SLIDER): vol.In(
             [MODE_BOX, MODE_SLIDER, MODE_AUTO]
@@ -124,6 +133,7 @@ async def async_setup_entry(
             setpoint,
             DwellDial(hass, entry_id, output, name, tracker, tracker.dwell),
             CycleDial(hass, entry_id, output, name, tracker, tracker.min_cycle),
+            DebtDecayDial(hass, entry_id, output, name, tracker, tracker.debt_tau),
             IntervalDial(hass, entry_id, output, name, tracker, setpoint),
         ]
     )
@@ -272,6 +282,7 @@ class TrackingPWMEntity(RestoreNumber):
         attr[ATTR_MIN_SWITCH_TIME] = str(timedelta(seconds=self._tracker.dwell))
         attr[ATTR_MIN_CYCLE_PERIOD] = str(timedelta(seconds=self._tracker.min_cycle))
         attr[ATTR_UPDATE_INTERVAL] = str(self._interval)
+        attr[ATTR_DEBT_DECAY] = str(timedelta(seconds=self._tracker.debt_tau))
         return attr
 
     @property
@@ -282,6 +293,7 @@ class TrackingPWMEntity(RestoreNumber):
             ATTR_OUTPUT_STATES: {self._output: self._tracker.relay_on},
             ATTR_WANTED_DUTY: self._duty(self._attr_native_value),
             ATTR_WANTED_DUTY_FILTERED: self._tracker.wanted_smooth,
+            ATTR_DUTY_FILTERED: self._tracker.actual_smooth,
             ATTR_DELIVERY_DEBT: self._tracker.debt,
             ATTR_SECONDS_SINCE_SWITCH: self._tracker.seconds_since(now, "switch"),
             ATTR_DWELL_REMAINING: self._tracker.hold_remaining(now, "dwell"),
@@ -373,6 +385,20 @@ class CycleDial(_DialBase):
         self._tracker.configure(
             min_cycle_s=value if value > 0 else 2.0 * self._tracker.dwell
         )
+
+
+class DebtDecayDial(_DialBase):
+    """Live debt die-out time constant in seconds (0 disables the leak)."""
+
+    _key = "debt_decay"
+    _label = "debt decay"
+    _min = 0.0
+    _max = 86400.0
+
+    async def _async_apply(self, value: float) -> None:
+        """Apply the debt die-out live."""
+        value = float(value)
+        self._tracker.configure(debt_tau_s=value if value > 0 else 0.0)
 
 
 class IntervalDial(_DialBase):

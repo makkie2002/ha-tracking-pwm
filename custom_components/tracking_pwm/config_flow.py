@@ -19,16 +19,18 @@ from homeassistant.helpers.schema_config_entry_flow import (
 )
 
 from .const import (
+    CONF_DEBT_DECAY,
+    CONF_DUTY_SMOOTHING,
     CONF_MIN_CYCLE_PERIOD,
     CONF_MIN_SWITCH_TIME,
     CONF_OUTPUTS,
     CONF_STEP,
     CONF_UPDATE_INTERVAL,
-    CONF_WANTED_SMOOTHING,
+    DEFAULT_DEBT_DECAY,
+    DEFAULT_DUTY_SMOOTHING,
     DEFAULT_MODE,
     DEFAULT_SWITCH_TIME,
     DEFAULT_UPDATE_INTERVAL,
-    DEFAULT_WANTED_SMOOTHING,
     DOMAIN,
     MODE_AUTO,
     MODE_BOX,
@@ -66,7 +68,10 @@ OPTIONS_SCHEMA = vol.Schema(
             CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
         ): selector.DurationSelector(),
         vol.Optional(
-            CONF_WANTED_SMOOTHING, default=DEFAULT_WANTED_SMOOTHING
+            CONF_DUTY_SMOOTHING, default=DEFAULT_DUTY_SMOOTHING
+        ): selector.DurationSelector(),
+        vol.Optional(
+            CONF_DEBT_DECAY, default=DEFAULT_DEBT_DECAY
         ): selector.DurationSelector(),
         vol.Optional(CONF_STEP, default=DEFAULT_STEP): selector.NumberSelector(
             selector.NumberSelectorConfig(

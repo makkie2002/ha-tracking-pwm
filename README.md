@@ -32,6 +32,7 @@ The number state always shows the wanted value. Diagnostics attributes
 | `output_states` | Relay entity_id → on/off |
 | `wanted_duty` | Wanted duty 0..1 (comparator input) |
 | `wanted_duty_filtered` | Slow (1h default) low-pass of the wanted duty — setpoint trend, diagnostic only |
+| `duty_filtered` | Slow (1h default) low-pass of the real relay duty — delivered trend, diagnostic only |
 | `delivery_debt` | Integrated over-delivery, in seconds of full output (+ means coasting on past over-delivery) |
 | `seconds_since_switch` | Seconds since the last relay flip (`None` before the first) |
 | `dwell_remaining` | Seconds until the dwell guard releases; > 0 means the relay is being held |
@@ -50,10 +51,13 @@ Adding the integration via the UI creates one **device** per relay:
   * *dwell* (s) — minimum relay on/off time, applied immediately
   * *minimum cycle* (s) — minimum time between cycle starts, applied
     immediately; `0` means automatic (2× dwell)
+  * *debt decay* (s) — time constant with which stale delivery debt dies
+    out to zero, applied immediately; `0` disables the leak (pure integrator)
   * *update interval* (s) — re-evaluation tick, re-armed immediately
 * **Diagnostics**: a `relay` binary sensor plus sensors for delivery
-  debt, wanted duty (instant and 1h-filtered trend), seconds since switch,
-  dwell/cycle remaining, last on/off durations and switch count. Because
+  debt, wanted duty (instant and 1h-filtered trend), real duty (1h-filtered
+  trend), seconds since switch, dwell/cycle remaining, last on/off
+  durations and switch count. Because
   these are sensors (not just attributes), they graph and record history;
   `switch_count` is a total-increasing counter.
 
@@ -95,7 +99,8 @@ number:
     minimal_switch_time: {'minutes': 2, 'seconds': 0}
     minimal_cycle_period: {'minutes': 10, 'seconds': 0}  # optional, default 2x dwell
     update_interval: {'seconds': 30}
-    wanted_smoothing: {'hours': 1, 'minutes': 0, 'seconds': 0}  # optional, 0 = raw
+    duty_smoothing: {'hours': 1, 'minutes': 0, 'seconds': 0}  # optional, 0 = raw
+    debt_decay: {'hours': 1, 'minutes': 0, 'seconds': 0}  # optional, 0 = pure integrator
     step: 1
     mode: "auto"
     unique_id: "example_load_pwm"
@@ -109,7 +114,8 @@ number:
 | `minimal_switch_time` | no | 2min | Minimum relay on/off time (dwell, both directions) |
 | `minimal_cycle_period` | no | 2× dwell | Minimum time between cycle starts |
 | `update_interval` | no | 30s | Re-evaluation tick; keeps the average exact with no new writes |
-| `wanted_smoothing` | no | 1h | Time constant of a slow low-pass on the wanted duty (diagnostic only); `0` = raw |
+| `duty_smoothing` | no | 1h | Time constant of a slow low-pass on the wanted and real duty (diagnostic only); `0` = raw (`wanted_smoothing` still accepted as legacy key) |
+| `debt_decay` | no | 1h | Time constant with which stale delivery debt dies out to zero; `0` = pure integrator (exact average) |
 | `step` / `mode` / `unique_id` | no | 1 / slider | Standard number entity options |
 
 Writes (`number.set_value`, e.g. from a PID controller every 30s) are
@@ -171,7 +177,19 @@ and HA PID thermostats visibly stretch pulses under `min_cycle_duration`
 instead of repaying them. Cycle-anchored designs (ESPHome `slow_pwm`,
 `HASmartThermostat`) quantize duty onto a fixed grid; this integration
 replaces the grid with the error integral, so the average is exact at any
-duty with any dwell.
+duty with any dwell (pure-integrator mode; see debt die-out below).
+
+**Debt die-out (leaky integrator, default 1h).** Each evaluation first
+shrinks the debt toward zero (`debt *= exp(-dt/τ)`) before adding the new
+`(u-w)*dt`. Stale owed/unpaid energy — e.g. a setpoint step to 0 while a
+negative (owed) debt sits frozen, or a step up while a positive debt is
+unpaid — is forgiven within a few τ instead of firing a catch-up pulse
+much later. The price is a small steady-state offset: the mean error equals
+the mean debt divided by τ, bounded by roughly `dwell / (2·τ)` (under 2%
+duty at 120s dwell / 1h τ). Set `debt_decay` to `0` for the pure integrator
+and the mathematically exact average. Both diagnostic filters
+(`wanted_duty_filtered`, `duty_filtered`) share the `duty_smoothing` time
+constant.
 
 [1]: https://www.embedded.com/sigma-delta-techniques-extend-dac-resolution/
 [2]: https://electronics.stackexchange.com/questions/127064/what-are-some-problems-with-running-a-heating-element-in-pwm-mode

@@ -6,13 +6,16 @@ CONF_OUTPUTS = "outputs"
 CONF_MIN_SWITCH_TIME = "minimal_switch_time"
 CONF_MIN_CYCLE_PERIOD = "minimal_cycle_period"
 CONF_UPDATE_INTERVAL = "update_interval"
-CONF_WANTED_SMOOTHING = "wanted_smoothing"
+CONF_WANTED_SMOOTHING = "wanted_smoothing"  # legacy, see CONF_DUTY_SMOOTHING
+CONF_DUTY_SMOOTHING = "duty_smoothing"
+CONF_DEBT_DECAY = "debt_decay"
 CONF_STEP = "step"
 
 ATTR_OUTPUT_STATES = "output_states"
 ATTR_DELIVERY_DEBT = "delivery_debt"
 ATTR_WANTED_DUTY = "wanted_duty"
 ATTR_WANTED_DUTY_FILTERED = "wanted_duty_filtered"
+ATTR_DUTY_FILTERED = "duty_filtered"
 ATTR_SECONDS_SINCE_SWITCH = "seconds_since_switch"
 ATTR_DWELL_REMAINING = "dwell_remaining"
 ATTR_CYCLE_REMAINING = "cycle_remaining"
@@ -22,6 +25,7 @@ ATTR_SWITCH_COUNT = "switch_count"
 ATTR_MIN_SWITCH_TIME = "minimal_switch_time"
 ATTR_MIN_CYCLE_PERIOD = "minimal_cycle_period"
 ATTR_UPDATE_INTERVAL = "update_interval"
+ATTR_DEBT_DECAY = "debt_decay"
 
 MODE_SLIDER = "slider"
 MODE_BOX = "box"
@@ -31,6 +35,8 @@ DEFAULT_MODE = MODE_SLIDER
 DEFAULT_SWITCH_TIME = {"minutes": 2}
 DEFAULT_UPDATE_INTERVAL = {"seconds": 30}
 DEFAULT_WANTED_SMOOTHING = {"hours": 1}
+DEFAULT_DUTY_SMOOTHING = {"hours": 1}
+DEFAULT_DEBT_DECAY = {"hours": 1}
 
 
 def as_timedelta(value, default: dict):
@@ -42,6 +48,20 @@ def as_timedelta(value, default: dict):
     if isinstance(value, dict):
         return timedelta(**value)
     return timedelta(**default)
+
+
+def smoothing_timedelta(options) -> "timedelta":
+    """Resolve the shared diagnostic-filter time constant.
+
+    Reads CONF_DUTY_SMOOTHING, falling back to the legacy
+    CONF_WANTED_SMOOTHING key so existing entries keep their setting.
+    """
+    from datetime import timedelta
+
+    raw = options.get(CONF_DUTY_SMOOTHING)
+    if raw is None:
+        raw = options.get(CONF_WANTED_SMOOTHING)
+    return as_timedelta(raw, DEFAULT_DUTY_SMOOTHING)
 
 
 def normalize_outputs(outputs):

@@ -12,7 +12,8 @@
                     "outputs": "Output switch entity",
                     "step": "Step size",
                     "update_interval": "Evaluation interval",
-                    "wanted_smoothing": "Wanted smoothing"
+                    "duty_smoothing": "Duty smoothing",
+                    "debt_decay": "Debt decay time"
                 },
                 "data_description": {
                     "maximum": "Value that means fully on (duty 1).",
@@ -21,7 +22,8 @@
                     "minimum": "Value that means fully off (duty 0).",
                     "mode": "Mode of user interface elements.",
                     "step": "Step size of the number.",
-                    "wanted_smoothing": "Time constant of the slow low-pass on the wanted duty (diagnostic only, never drives the relay)."
+                    "duty_smoothing": "Time constant of the slow low-pass filters on the wanted and real duty (diagnostic only, never drives the relay).",
+                    "debt_decay": "Time constant with which stale delivery debt dies out to zero (0 = pure integrator)."
                 },
                 "description": "Create a number that drives a single switch with sigma-delta tracking PWM. The relay follows the wanted duty; the delivery-debt integrator keeps the long-term average exact.",
                 "title": "Tracking PWM"
@@ -40,7 +42,8 @@
                     "outputs": "Output switch entity",
                     "step": "Step size",
                     "update_interval": "Evaluation interval",
-                    "wanted_smoothing": "Wanted smoothing"
+                    "duty_smoothing": "Duty smoothing",
+                    "debt_decay": "Debt decay time"
                 },
                 "data_description": {
                     "maximum": "Value that means fully on (duty 1).",

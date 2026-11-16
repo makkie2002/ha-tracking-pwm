@@ -23,9 +23,10 @@ def T0():
     return datetime.now(timezone.utc).replace(microsecond=0)
 
 
-def run(w, dwell=120.0, min_cycle=None, tick=30.0, minutes=720.0):
+def run(w, dwell=120.0, min_cycle=None, tick=30.0, minutes=720.0,
+        debt_tau_s=0.0):
     """Drive a tracker with constant wanted duty; return relay trace."""
-    tr = Tracker(dwell_s=dwell, min_cycle_s=min_cycle)
+    tr = Tracker(dwell_s=dwell, min_cycle_s=min_cycle, debt_tau_s=debt_tau_s)
     now = T0()
     out = []
     n = int(minutes * 60 / tick)
@@ -63,11 +64,21 @@ def test_dwell_holds_both_directions():
 
 
 def test_average_exact_across_duties():
+    # Pure integrator (leak disabled): the long-term average is exact.
     for w, expect in [(0.02, 0.02), (0.05, 0.05), (0.15, 0.15), (0.5, 0.5),
                       (0.6, 0.6), (0.8, 0.8), (0.95, 0.95), (1.0, 1.0)]:
-        _, out = run(w, dwell=120.0, minutes=720.0)
+        _, out = run(w, dwell=120.0, minutes=720.0, debt_tau_s=0.0)
         avg = sum(out) / len(out)
         assert abs(avg - expect) < 0.01, (w, avg)
+
+
+def test_average_bounded_with_default_leak():
+    # 1h die-out (the default): stale debt is forgiven, at the cost of a
+    # small steady-state offset bounded by roughly dwell / (2 * tau).
+    for w in [0.02, 0.05, 0.15, 0.5, 0.6, 0.8, 0.95]:
+        _, out = run(w, dwell=120.0, minutes=720.0, debt_tau_s=3600.0)
+        avg = sum(out) / len(out)
+        assert abs(avg - w) < 0.025, (w, avg)
 
 
 def test_low_duty_repaid_exactly():
@@ -144,10 +155,26 @@ def test_diagnostics_bookkeeping():
 
 def test_configure_updates_live():
     tr = Tracker(dwell_s=120.0)
-    assert tr.configure(dwell_s=60.0) == {"dwell": 60.0, "min_cycle": 240.0}
+    assert tr.configure(dwell_s=60.0) == {
+        "dwell": 60.0,
+        "min_cycle": 240.0,
+        "debt_tau": 3600.0,
+    }
     assert tr.min_cycle == 240.0  # unchanged, still >= 2x dwell
-    assert tr.configure(min_cycle_s=30.0) == {"dwell": 60.0, "min_cycle": 120.0}
+    assert tr.configure(min_cycle_s=30.0) == {
+        "dwell": 60.0,
+        "min_cycle": 120.0,
+        "debt_tau": 3600.0,
+    }
     assert tr.min_cycle == 120.0  # clamped to 2x dwell
+    assert tr.configure(debt_tau_s=600.0) == {
+        "dwell": 60.0,
+        "min_cycle": 120.0,
+        "debt_tau": 600.0,
+    }
+    assert tr.debt_tau == 600.0
+    assert tr.configure(debt_tau_s=0)["debt_tau"] == 0.0  # 0 disables
+    assert tr.configure(debt_tau_s=None)["debt_tau"] == 0.0  # None keeps
 
 
 def test_configure_rescales_debt_limit():
@@ -194,3 +221,49 @@ def test_wanted_smoothing_disabled_tracks_raw():
     assert tr.wanted_smooth == 0.2
     tr.update(now + timedelta(seconds=30), 0.9)
     assert tr.wanted_smooth == 0.9
+
+
+def test_debt_decay_dies_out():
+    # Build up debt (120 duty-seconds owed), then hold at zero wanted with
+    # the relay off: pure u-w term is 0, only the leak moves the debt.
+    tr = Tracker(dwell_s=0.0, debt_tau_s=3600.0)
+    now = T0()
+    assert tr.update(now, 0.5) == (True, True)
+    assert tr.update(now + timedelta(seconds=120), 0.0) == (False, True)
+    assert tr.debt == 120.0
+    tr.update(now + timedelta(seconds=120 + 3600), 0.0)
+    assert tr.debt == pytest.approx(120.0 * 2.718281828**-1, abs=0.01)
+
+
+def test_debt_decay_disabled_is_pure_integrator():
+    tr = Tracker(dwell_s=0.0, debt_tau_s=0)
+    now = T0()
+    assert tr.update(now, 0.5) == (True, True)
+    assert tr.update(now + timedelta(seconds=120), 0.0) == (False, True)
+    assert tr.debt == 120.0
+    tr.update(now + timedelta(seconds=120 + 3600), 0.0)
+    assert tr.debt == 120.0  # frozen forever, legacy behavior
+
+
+def test_actual_smoothing_converges():
+    tr = Tracker(dwell_s=0.0, wanted_tau_s=3600.0)
+    now = T0()
+    assert tr.update(now, 1.0) == (True, True)
+    assert tr.actual_smooth == 0.0  # first sample latched to pre-flip off
+    tr.update(now + timedelta(seconds=3600), 1.0)
+    assert tr.actual_smooth == pytest.approx(
+        1 - 2.718281828**-1, abs=0.001
+    )
+    tr.update(now + timedelta(seconds=7200), 1.0)
+    assert tr.actual_smooth == pytest.approx(
+        1 - 2.718281828**-2, abs=0.001
+    )
+
+
+def test_actual_smoothing_disabled_tracks_raw():
+    tr = Tracker(dwell_s=0.0, wanted_tau_s=0)
+    now = T0()
+    tr.update(now, 1.0)
+    assert tr.actual_smooth == 0.0  # pre-flip state of the first interval
+    tr.update(now + timedelta(seconds=30), 1.0)
+    assert tr.actual_smooth == 1.0

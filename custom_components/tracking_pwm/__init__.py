@@ -4,15 +4,16 @@ from homeassistant.const import CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_DEBT_DECAY,
     CONF_MIN_CYCLE_PERIOD,
     CONF_MIN_SWITCH_TIME,
     CONF_OUTPUTS,
-    CONF_WANTED_SMOOTHING,
+    DEFAULT_DEBT_DECAY,
     DEFAULT_SWITCH_TIME,
-    DEFAULT_WANTED_SMOOTHING,
     DOMAIN,
     as_timedelta,
     normalize_outputs,
+    smoothing_timedelta,
 )
 from .controller import Tracker
 
@@ -30,10 +31,14 @@ def build_tracker(options) -> Tracker:
         if raw_period
         else None
     )
-    wanted_tau = as_timedelta(
-        options.get(CONF_WANTED_SMOOTHING), DEFAULT_WANTED_SMOOTHING
+    wanted_tau = smoothing_timedelta(options).total_seconds()
+    debt_tau = as_timedelta(
+        options.get(CONF_DEBT_DECAY), DEFAULT_DEBT_DECAY
     ).total_seconds()
-    return Tracker(dwell_s=dwell, min_cycle_s=min_cycle, wanted_tau_s=wanted_tau)
+    return Tracker(
+        dwell_s=dwell, min_cycle_s=min_cycle, wanted_tau_s=wanted_tau,
+        debt_tau_s=debt_tau,
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
